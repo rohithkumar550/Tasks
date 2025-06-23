@@ -1,0 +1,196 @@
+
+1. Weather Table – Compare Temperature with Previous Day
+SELECT t1.WeatherId
+FROM Weather t1
+JOIN Weather t2 ON DATEDIFF(t1.DateRecorded, t2.DateRecorded) = 1
+WHERE t1.Temp > t2.Temp;
+
+2. First Login Per Player
+SELECT pid, MIN(login_date) AS first_login
+FROM PlayerActivity
+GROUP BY pid;
+
+3. Second Highest Salary
+SELECT MAX(sal) AS SecondHighestSalary
+FROM Staff
+WHERE sal < (SELECT MAX(sal) FROM Staff);
+
+4. Most Active User by Ratings
+SELECT uname
+FROM UserInfo u
+JOIN (
+  SELECT uid, COUNT(*) AS rate_cnt
+  FROM Ratings
+  GROUP BY uid
+  ORDER BY rate_cnt DESC, uid ASC
+  LIMIT 1
+) r ON u.uid = r.uid;
+
+5. Highest Rated Movie in February 2020
+SELECT movie_name
+FROM MovieList m
+JOIN (
+  SELECT mid, AVG(score) AS avg_score
+  FROM Reviews
+  WHERE review_date BETWEEN '2020-02-01' AND '2020-02-29'
+  GROUP BY mid
+  ORDER BY avg_score DESC, mid ASC
+  LIMIT 1
+) t ON m.mid = t.mid;
+
+6. Employees Earning More Than Their Manager
+SELECT emp.name
+FROM Staff emp
+JOIN Staff mgr ON emp.manager_id = mgr.emp_id
+WHERE emp.salary > mgr.salary;
+
+7. Remove Duplicate Emails
+DELETE p1
+FROM People p1
+JOIN People p2 ON p1.mail = p2.mail AND p1.pid > p2.pid;
+
+8. Stadium with 3+ Consecutive Days >= 100 People
+SELECT sid, visit_day, crowd
+FROM (
+  SELECT sid, visit_day, crowd,
+         LEAD(crowd, 1) OVER (ORDER BY visit_day) AS next_day,
+         LAG(crowd, 1) OVER (ORDER BY visit_day) AS prev_day
+  FROM Arena
+) a
+WHERE (crowd >= 100 AND next_day >= 100 AND prev_day >= 100)
+   OR (crowd >= 100 AND next_day >= 100)
+   OR (crowd >= 100 AND prev_day >= 100);
+
+9. Customers Who Bought All Products
+SELECT cid
+FROM Orders
+GROUP BY cid
+HAVING COUNT(DISTINCT prod_id) = (SELECT COUNT(*) FROM Inventory);
+
+1. Top 5 Customers by Total Spent
+SELECT cust.customer_id, cust.customer_name, SUM(ord.total_amount) AS total_spent
+FROM Customers cust
+JOIN Orders ord ON cust.customer_id = ord.customer_id
+GROUP BY cust.customer_id, cust.customer_name
+ORDER BY total_spent DESC
+LIMIT 5;
+
+2. Employees by Number of Orders Handled
+SELECT emp.employee_id, emp.employee_name, COUNT(ord.order_id) AS orders_handled
+FROM Employees emp
+JOIN Orders ord ON emp.employee_id = ord.employee_id
+GROUP BY emp.employee_id, emp.employee_name
+ORDER BY orders_handled DESC;
+
+3. Highest Revenue-Generating Product by Category
+SELECT cat.category_name, prod.product_name, SUM(det.quantity * det.unit_price) AS revenue
+FROM OrderDetails det
+JOIN Products prod ON det.product_id = prod.product_id
+JOIN Categories cat ON prod.category_id = cat.category_id
+GROUP BY cat.category_name, prod.product_id, prod.product_name
+HAVING SUM(det.quantity * det.unit_price) = (
+    SELECT MAX(category_revenue)
+    FROM (
+        SELECT prod_inner.category_id, prod_inner.product_id, SUM(det_inner.quantity * det_inner.unit_price) AS category_revenue
+        FROM OrderDetails det_inner
+        JOIN Products prod_inner ON det_inner.product_id = prod_inner.product_id
+        GROUP BY prod_inner.category_id, prod_inner.product_id
+        HAVING prod_inner.category_id = cat.category_id
+    ) AS subquery
+);
+
+4. Average Delivery Days by Shipper
+SELECT shipper.shipper_id, shipper.shipper_name, AVG(DATEDIFF(ord.shipped_date, ord.order_date)) AS avg_delivery_days
+FROM Orders ord
+JOIN Shippers shipper ON ord.shipper_id = shipper.shipper_id
+WHERE ord.shipped_date IS NOT NULL AND ord.order_date IS NOT NULL
+GROUP BY shipper.shipper_id, shipper.shipper_name;
+
+1. Employees earning above department average
+SELECT emp.emp_id, emp.emp_name, emp.salary, emp.dept_id
+FROM employees emp
+JOIN (
+    SELECT dept_id, AVG(salary) AS avg_salary
+    FROM employees
+    GROUP BY dept_id
+) dept_avg ON emp.dept_id = dept_avg.dept_id
+WHERE emp.salary > dept_avg.avg_salary;
+
+2. Employees who worked on all projects in their department
+SELECT emp.emp_id, emp.emp_name
+FROM employees emp
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM projects proj
+    JOIN employees dept_emp ON proj.emp_id = dept_emp.emp_id
+    WHERE dept_emp.dept_id = emp.dept_id
+    AND NOT EXISTS (
+        SELECT 1
+        FROM projects proj2
+        WHERE proj2.project_id = proj.project_id AND proj2.emp_id = emp.emp_id
+    )
+);
+
+3. Highest paid employee (hired after 2020) in each department
+SELECT dept_id, emp_id, emp_name, salary
+FROM (
+    SELECT *, 
+           RANK() OVER (PARTITION BY dept_id ORDER BY salary DESC) AS rnk
+    FROM employees
+    WHERE hire_date > '2020-01-01'
+) top_earners
+WHERE rnk = 1;
+
+4. Departments where all employees earn more than 55000
+SELECT dept.dept_id, dept.dept_name
+FROM departments dept
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM employees emp
+    WHERE emp.dept_id = dept.dept_id AND emp.salary <= 55000
+);
+
+5. Customers spending above their region’s average
+SELECT cust.customer_id, cust.customer_name, cust.region, SUM(ord.total_amount) AS customer_total
+FROM customers cust
+JOIN orders ord ON cust.customer_id = ord.customer_id
+GROUP BY cust.customer_id, cust.customer_name, cust.region
+HAVING SUM(ord.total_amount) > (
+    SELECT AVG(ord2.total_amount)
+    FROM orders ord2
+    JOIN customers cust2 ON ord2.customer_id = cust2.customer_id
+    WHERE cust2.region = cust.region
+);
+
+6. Orders containing products from all categories
+SELECT ord.order_id
+FROM orders ord
+JOIN order_details det ON ord.order_id = det.order_id
+JOIN products prod ON det.product_id = prod.product_id
+GROUP BY ord.order_id
+HAVING COUNT(DISTINCT prod.category) = (
+    SELECT COUNT(DISTINCT category) FROM products
+);
+
+7. Highest priced product per customer (post 2023)
+SELECT customer_id, product_id, product_name, max_price
+FROM (
+    SELECT ord.customer_id, prod.product_id, prod.product_name,
+           (det.unit_price * det.quantity) AS max_price,
+           RANK() OVER (PARTITION BY ord.customer_id ORDER BY det.unit_price * det.quantity DESC) AS rnk
+    FROM orders ord
+    JOIN order_details det ON ord.order_id = det.order_id
+    JOIN products prod ON det.product_id = prod.product_id
+    WHERE ord.order_date > '2023-01-01'
+) top_product
+WHERE rnk = 1;
+
+8. Regions with no customer who ordered product ID 202
+SELECT DISTINCT cust.region
+FROM customers cust
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM orders ord
+    JOIN order_details det ON ord.order_id = det.order_id
+    WHERE ord.customer_id = cust.customer_id AND det.product_id = 202
+);
