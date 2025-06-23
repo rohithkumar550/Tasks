@@ -1,21 +1,20 @@
-
-1. Weather Table – Compare Temperature with Previous Day
+-- Weather Table – Compare Temperature with Previous Day
 SELECT t1.WeatherId
 FROM Weather t1
 JOIN Weather t2 ON DATEDIFF(t1.DateRecorded, t2.DateRecorded) = 1
 WHERE t1.Temp > t2.Temp;
 
-2. First Login Per Player
+--  First Login Per Player
 SELECT pid, MIN(login_date) AS first_login
 FROM PlayerActivity
 GROUP BY pid;
 
-3. Second Highest Salary
+-- Second Highest Salary
 SELECT MAX(sal) AS SecondHighestSalary
 FROM Staff
 WHERE sal < (SELECT MAX(sal) FROM Staff);
 
-4. Most Active User by Ratings
+-- Most Active User by Ratings
 SELECT uname
 FROM UserInfo u
 JOIN (
@@ -26,7 +25,7 @@ JOIN (
   LIMIT 1
 ) r ON u.uid = r.uid;
 
-5. Highest Rated Movie in February 2020
+-- Highest Rated Movie in February 2020
 SELECT movie_name
 FROM MovieList m
 JOIN (
@@ -38,18 +37,18 @@ JOIN (
   LIMIT 1
 ) t ON m.mid = t.mid;
 
-6. Employees Earning More Than Their Manager
+-- Employees Earning More Than Their Manager
 SELECT emp.name
 FROM Staff emp
 JOIN Staff mgr ON emp.manager_id = mgr.emp_id
 WHERE emp.salary > mgr.salary;
 
-7. Remove Duplicate Emails
+-- Remove Duplicate Emails
 DELETE p1
 FROM People p1
 JOIN People p2 ON p1.mail = p2.mail AND p1.pid > p2.pid;
 
-8. Stadium with 3+ Consecutive Days >= 100 People
+-- Stadium with 3+ Consecutive Days >= 100 People
 SELECT sid, visit_day, crowd
 FROM (
   SELECT sid, visit_day, crowd,
@@ -61,13 +60,13 @@ WHERE (crowd >= 100 AND next_day >= 100 AND prev_day >= 100)
    OR (crowd >= 100 AND next_day >= 100)
    OR (crowd >= 100 AND prev_day >= 100);
 
-9. Customers Who Bought All Products
+-- Customers Who Bought All Products
 SELECT cid
 FROM Orders
 GROUP BY cid
 HAVING COUNT(DISTINCT prod_id) = (SELECT COUNT(*) FROM Inventory);
 
-1. Top 5 Customers by Total Spent
+-- Top 5 Customers by Total Spent
 SELECT cust.customer_id, cust.customer_name, SUM(ord.total_amount) AS total_spent
 FROM Customers cust
 JOIN Orders ord ON cust.customer_id = ord.customer_id
@@ -75,14 +74,14 @@ GROUP BY cust.customer_id, cust.customer_name
 ORDER BY total_spent DESC
 LIMIT 5;
 
-2. Employees by Number of Orders Handled
+-- Employees by Number of Orders Handled
 SELECT emp.employee_id, emp.employee_name, COUNT(ord.order_id) AS orders_handled
 FROM Employees emp
 JOIN Orders ord ON emp.employee_id = ord.employee_id
 GROUP BY emp.employee_id, emp.employee_name
 ORDER BY orders_handled DESC;
 
-3. Highest Revenue-Generating Product by Category
+-- Highest Revenue-Generating Product by Category
 SELECT cat.category_name, prod.product_name, SUM(det.quantity * det.unit_price) AS revenue
 FROM OrderDetails det
 JOIN Products prod ON det.product_id = prod.product_id
@@ -99,14 +98,14 @@ HAVING SUM(det.quantity * det.unit_price) = (
     ) AS subquery
 );
 
-4. Average Delivery Days by Shipper
+-- Average Delivery Days by Shipper
 SELECT shipper.shipper_id, shipper.shipper_name, AVG(DATEDIFF(ord.shipped_date, ord.order_date)) AS avg_delivery_days
 FROM Orders ord
 JOIN Shippers shipper ON ord.shipper_id = shipper.shipper_id
 WHERE ord.shipped_date IS NOT NULL AND ord.order_date IS NOT NULL
 GROUP BY shipper.shipper_id, shipper.shipper_name;
 
-1. Employees earning above department average
+-- Employees earning above department average
 SELECT emp.emp_id, emp.emp_name, emp.salary, emp.dept_id
 FROM employees emp
 JOIN (
@@ -116,7 +115,7 @@ JOIN (
 ) dept_avg ON emp.dept_id = dept_avg.dept_id
 WHERE emp.salary > dept_avg.avg_salary;
 
-2. Employees who worked on all projects in their department
+-- Employees who worked on all projects in their department
 SELECT emp.emp_id, emp.emp_name
 FROM employees emp
 WHERE NOT EXISTS (
@@ -131,7 +130,7 @@ WHERE NOT EXISTS (
     )
 );
 
-3. Highest paid employee (hired after 2020) in each department
+-- Highest paid employee (hired after 2020) in each department
 SELECT dept_id, emp_id, emp_name, salary
 FROM (
     SELECT *, 
@@ -141,7 +140,7 @@ FROM (
 ) top_earners
 WHERE rnk = 1;
 
-4. Departments where all employees earn more than 55000
+-- Departments where all employees earn more than 55000
 SELECT dept.dept_id, dept.dept_name
 FROM departments dept
 WHERE NOT EXISTS (
@@ -150,7 +149,7 @@ WHERE NOT EXISTS (
     WHERE emp.dept_id = dept.dept_id AND emp.salary <= 55000
 );
 
-5. Customers spending above their region’s average
+-- Customers spending above their region’s average
 SELECT cust.customer_id, cust.customer_name, cust.region, SUM(ord.total_amount) AS customer_total
 FROM customers cust
 JOIN orders ord ON cust.customer_id = ord.customer_id
@@ -162,7 +161,7 @@ HAVING SUM(ord.total_amount) > (
     WHERE cust2.region = cust.region
 );
 
-6. Orders containing products from all categories
+-- Orders containing products from all categories
 SELECT ord.order_id
 FROM orders ord
 JOIN order_details det ON ord.order_id = det.order_id
@@ -172,7 +171,7 @@ HAVING COUNT(DISTINCT prod.category) = (
     SELECT COUNT(DISTINCT category) FROM products
 );
 
-7. Highest priced product per customer (post 2023)
+-- Highest priced product per customer (post 2023)
 SELECT customer_id, product_id, product_name, max_price
 FROM (
     SELECT ord.customer_id, prod.product_id, prod.product_name,
@@ -185,7 +184,7 @@ FROM (
 ) top_product
 WHERE rnk = 1;
 
-8. Regions with no customer who ordered product ID 202
+-- Regions with no customer who ordered product ID 202
 SELECT DISTINCT cust.region
 FROM customers cust
 WHERE NOT EXISTS (
