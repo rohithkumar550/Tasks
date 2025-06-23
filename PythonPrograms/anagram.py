@@ -6,6 +6,5 @@ def group_anagrams(words):
             anagrams[key] = []
         anagrams[key].append(word)
     return list(anagrams.values())
-
 words = ["eat", "tea", "tan", "ate", "nat", "bat"]
 print(group_anagrams(words))
